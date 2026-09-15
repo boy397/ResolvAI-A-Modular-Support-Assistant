@@ -5,7 +5,7 @@ intent_discovery:
   n_clusters: 10
 
 classification:
-  label_sample_size: 100
+  label_sample_size: 10
 
 retrieval:
   top_k_retrieval: 3

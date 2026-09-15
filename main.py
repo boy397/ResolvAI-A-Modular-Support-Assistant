@@ -3,6 +3,7 @@ to produce the artifacts app.py serves: config/intents.yaml, models/*.pkl,
 artifacts/retrieval_index.pkl. Golden-set evaluation is intentionally NOT part
 of this automated run -- it requires a human labeling step, see stage_06 and
 the README."""
+import os
 from resolvai import logger
 from resolvai.pipeline.stage_01_data_ingestion import DataIngestionPipeline
 from resolvai.pipeline.stage_02_thread_reconstruction import ThreadReconstructionPipeline
@@ -21,6 +22,10 @@ STAGES = [
 if __name__ == "__main__":
     for name, pipeline_cls in STAGES:
         try:
+            if name == "Intent Discovery" and os.path.exists("config/intents.yaml"):
+                logger.info(f"Skipping {name} because config/intents.yaml already exists.")
+                continue
+                
             logger.info(f">>>>>> stage {name} started <<<<<<")
             pipeline_cls().main()
             logger.info(f">>>>>> stage {name} completed <<<<<<\n\nx==========x")
