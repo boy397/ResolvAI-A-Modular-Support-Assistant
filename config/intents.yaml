@@ -1,0 +1,10 @@
+general_complaint: The customer is expressing general dissatisfaction with the service or product.
+delivery_issue: The customer is reporting a problem with the delivery, such as a delayed or missing package.
+billing_dispute: The customer is questioning a charge or asking for a refund.
+account_access: The customer needs help logging in or resetting their password.
+order_modification: The customer wants to change or cancel an existing order.
+product_inquiry: The customer is asking a question about a product's features or availability.
+return_request: The customer wants to return a product.
+scam_report: The customer is reporting a suspected scam or fraudulent activity.
+escalate_to_human: The customer explicitly demands to speak to a human agent or manager.
+community_follow_up: The brand is following up with the customer regarding a previous interaction.

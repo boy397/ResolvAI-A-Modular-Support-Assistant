@@ -1,0 +1,33 @@
+random_state: 42
+
+intent_discovery:
+  cluster_sample_size: 500
+  n_clusters: 10
+
+classification:
+  label_sample_size: 100
+
+retrieval:
+  top_k_retrieval: 3
+
+escalation:
+  confidence_threshold: 0.70
+  similarity_threshold: 0.35
+  risk_keywords:
+    - "lawsuit"
+    - "lawyer"
+    - "sue"
+    - "fraud"
+    - "chargeback"
+    - "injury"
+    - "legal action"
+    - "scam"
+    - "unauthorized charge"
+
+golden_set:
+  golden_set_size: 150
+  judge_calibration_size: 35
+
+llm:
+  provider: groq
+  model: qwen/qwen3.8-27b

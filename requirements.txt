@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+sentence-transformers
+pyyaml
+flask
+gunicorn
+python-dotenv
+groq
+google-generativeai
+-e .

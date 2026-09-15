@@ -1,0 +1,40 @@
+artifacts_root: artifacts
+
+data_ingestion:
+  raw_data_path: data/raw/twcs.csv
+  subsample_path: data/processed/raw_subsample.csv
+  candidate_brands: ["AmazonHelp", "AppleSupport", "SpotifyCares", "Uber_Support"]
+  chosen_brand: "AmazonHelp"   # set after reviewing the profiling table stage 01 prints
+
+thread_reconstruction:
+  subsample_path: data/processed/raw_subsample.csv
+  cleaned_pairs_path: data/processed/cleaned_pairs.csv
+
+intent_discovery:
+  cleaned_pairs_path: data/processed/cleaned_pairs.csv
+  intents_config_path: config/intents.yaml
+  embedding_model: all-MiniLM-L6-v2
+
+classification:
+  cleaned_pairs_path: data/processed/cleaned_pairs.csv
+  intents_config_path: config/intents.yaml
+  models_dir: models
+  vectorizer_path: models/tfidf_vectorizer.pkl
+  classifier_path: models/logreg_clf.pkl
+  comparison_output_path: data/processed/classifier_comparison.csv
+
+retrieval:
+  cleaned_pairs_path: data/processed/cleaned_pairs.csv
+  intents_config_path: config/intents.yaml
+  index_cache_path: artifacts/retrieval_index.pkl
+  generation_log_path: data/processed/generation_log.jsonl
+  embedding_model: all-MiniLM-L6-v2
+
+golden_set:
+  golden_dir: data/golden
+  golden_template_path: data/golden/golden_set_TEMPLATE.csv
+  golden_set_path: data/golden/golden_set.csv
+  judge_calibration_path: data/golden/judge_calibration_TEMPLATE.csv
+  cleaned_pairs_path: data/processed/cleaned_pairs.csv
+  vectorizer_path: models/tfidf_vectorizer.pkl
+  classifier_path: models/logreg_clf.pkl

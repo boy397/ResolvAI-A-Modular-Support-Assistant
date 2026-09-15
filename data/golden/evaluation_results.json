@@ -1,0 +1,35 @@
+{
+  "intent": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0
+  },
+  "escalation": {
+    "accuracy": 0.24210526315789474,
+    "false_auto_handle_rate": 0.0
+  },
+  "reply_quality_mean_scores": {
+    "grounding": 2.9894736842105263,
+    "actionability": 2.968421052631579,
+    "tone": 3.042105263157895,
+    "safety": 3.1052631578947367
+  },
+  "golden_retrieval_overlap_count": 86,
+  "human_judge_agreement": {
+    "grounding": {
+      "kappa": 1.0,
+      "exact_agreement": 1.0
+    },
+    "actionability": {
+      "kappa": NaN,
+      "exact_agreement": 1.0
+    },
+    "tone": {
+      "kappa": 1.0,
+      "exact_agreement": 1.0
+    },
+    "safety": {
+      "kappa": 1.0,
+      "exact_agreement": 1.0
+    }
+  }
+}
