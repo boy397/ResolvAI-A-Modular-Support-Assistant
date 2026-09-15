@@ -1,6 +1,4 @@
 import pickle
-import time
-import random
 import yaml
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -21,23 +19,14 @@ class ClassificationBaselines:
         self.llm_call = LLMClient.get(config.llm_provider, config.llm_model)
 
     def classify_intent_llm(self, text: str) -> str:
-        prompt = f"""Classify the customer's intent into exactly one of the following categories:
-{chr(10).join(f"- {k}: {v}" for k, v in self.intents.items())}
-- unmatched: If it clearly does not fit any of the above.
+        intent_list = "\n".join(f"- {k}: {v}" for k, v in self.intents.items())
+        prompt = f"""Classify this customer support message into exactly one intent:
+{intent_list}
 
-Customer message: "{text}"
-Respond with ONLY the category name and nothing else."""
-        try:
-            time.sleep(0.3)
-            raw = self.llm_call(prompt, max_tokens=10).strip().lower()
-            # fuzzy match if LLM added punctuation
-            for k in self.intents:
-                if k in raw:
-                    return k
-            return "unmatched"
-        except Exception as e:
-            logger.warning(f"classification failed: {e}")
-            return "unmatched"
+Message: "{text}"
+Respond with ONLY the intent key."""
+        raw = self.llm_call(prompt, max_tokens=20).strip().lower().replace(" ", "_")
+        return raw if raw in self.intents else "unmatched"
 
     def run_benchmarks(self) -> pd.DataFrame:
         pairs_df = pd.read_csv(self.config.cleaned_pairs_path)
@@ -54,18 +43,11 @@ Respond with ONLY the category name and nothing else."""
         majority_acc = accuracy_score(sample["llm_intent"], [majority_class] * len(sample))
 
         # Baseline 2: TF-IDF + LogReg
-        try:
-            X_train, X_test, y_train, y_test = train_test_split(
-                sample["customer_text_clean"], sample["llm_intent"],
-                test_size=0.2, random_state=1, stratify=sample["llm_intent"],
-            )
-        except ValueError:
-            # stratify fails if any class has <2 members; fall back to random split
-            logger.warning("stratified split failed (some intents have <2 samples); using random split")
-            X_train, X_test, y_train, y_test = train_test_split(
-                sample["customer_text_clean"], sample["llm_intent"],
-                test_size=0.2, random_state=1,
-            )
+        can_stratify = sample["llm_intent"].value_counts().min() > 1
+        X_train, X_test, y_train, y_test = train_test_split(
+            sample["customer_text_clean"], sample["llm_intent"],
+            test_size=0.2, random_state=1, stratify=sample["llm_intent"] if can_stratify else None,
+        )
         vectorizer = TfidfVectorizer(max_features=3000, ngram_range=(1, 2))
         X_train_vec = vectorizer.fit_transform(X_train)
         X_test_vec = vectorizer.transform(X_test)

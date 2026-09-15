@@ -1,0 +1,18 @@
+ios_update_battery_drain: Customer reports battery draining unusually fast, or overheating,
+  starting right after installing an iOS update.
+ios_update_bug_report: Customer reports a bug, crash, freeze, black screen, or broken
+  feature (including the well-known "I" autocorrect/capitalization bug) that started
+  after an iOS or watchOS update.
+device_hardware_issue: Device won't turn on, won't charge, has a cracked screen, or
+  another physical hardware problem, independent of any recent software update.
+account_access_issue: Customer cannot log in, access their Apple ID, or reach account
+  information.
+connectivity_issue: WiFi, Bluetooth, cellular signal, or notification delivery is
+  unreliable or not working (e.g. AirPods audio routing, dropped signal, missed
+  notifications).
+how_to_question: Customer is asking how to do something, whether a feature exists,
+  or for product/pricing information -- not reporting something broken.
+general_complaint: Customer is venting frustration or dissatisfaction (often with
+  strong language) without describing a specific actionable technical issue.
+positive_feedback: Customer is thanking support or confirming a fix worked; no further
+  action needed.

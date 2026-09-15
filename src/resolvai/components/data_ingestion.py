@@ -13,16 +13,27 @@ BOILERPLATE_PATTERN = re.compile(
 class DataIngestion:
     def __init__(self, config: DataIngestionConfig):
         self.config = config
+        self._cached_df = None
 
     def _load(self) -> pd.DataFrame:
-        df = pd.read_csv(self.config.raw_data_path, low_memory=False)
+        # profile_brands() and create_subsample() both need a full pass over the raw
+        # file; cache it so a ~3M-row twcs.csv (500MB+) is only parsed once per run.
+        # created_at / response_tweet_id are dropped -- nothing downstream uses them,
+        # and skipping them meaningfully cuts memory on the full dataset.
+        if self._cached_df is not None:
+            return self._cached_df
+        df = pd.read_csv(
+            self.config.raw_data_path,
+            usecols=["tweet_id", "author_id", "inbound", "text", "in_response_to_tweet_id"],
+            low_memory=False,
+        )
         df["inbound"] = df["inbound"].astype(bool)
         df["tweet_id"] = df["tweet_id"].astype("Int64").astype(str).replace("<NA>", pd.NA)
         df["in_response_to_tweet_id"] = (
             df["in_response_to_tweet_id"].astype("Int64").astype(str).replace("<NA>", pd.NA)
         )
-        df["response_tweet_id"] = df["response_tweet_id"].astype(str).replace("nan", pd.NA)
         logger.info(f"loaded raw dataset: {len(df):,} rows")
+        self._cached_df = df
         return df
 
     def profile_brands(self) -> pd.DataFrame:

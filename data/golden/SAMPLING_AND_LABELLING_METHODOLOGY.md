@@ -1,28 +1,79 @@
-# Sampling and Labelling Methodology
+# Golden set: sampling and labelling methodology
 
-## Sampling Strategy
+## Sampling
 
-The dataset used is the TWCS (Customer Support on Twitter) dataset. To create a high-quality golden set for evaluating our customer support agent, we employed a stratified sampling approach. 
+150 customer messages were drawn from the 104,951 real, cleaned AppleSupport
+customer/brand-reply pairs produced by stages 1-2 of the pipeline (from the
+full Kaggle "Customer Support on Twitter" dataset, `twcs.csv`, filtered to
+AppleSupport threads).
 
-1. **Initial Filtering:** The data was filtered to isolate conversations involving the chosen brand (`AmazonHelp`) and reconstructed into conversational threads (customer query and brand reply pairs).
-2. **Rough Intent Prediction:** We ran a TF-IDF + Logistic Regression classifier (trained in earlier stages) over all cleaned pairs to generate a "rough intent" prediction for each customer message.
-3. **Stratification:** We stratified the dataset based on these rough intents to ensure diverse representation across all issue types (e.g., `general_complaint`, `billing_dispute`, `refund_request`).
-4. **Difficulty Tagging:** A subset of the sampled messages was randomly tagged with varying difficulty levels (`clear`, `ambiguous`, `hard`) to test the agent's robustness across different query complexities.
-5. **Sample Size:** 150 rows were sampled based on these criteria to form the initial template for the golden set.
+`EvaluationJudge.build_golden_template()` stratifies by the TF-IDF+LogReg
+classifier's `rough_intent` prediction, then tags ~25% of rows "ambiguous"
+and ~15% "hard" (the rest "clear") via random sampling, to make sure the
+golden set isn't just easy cases.
 
-## Labelling Approach (Silver-Standard)
+**Known limitation, and it matters**: the classifier had collapsed to
+predicting `general_complaint` for all 250 of its training examples' silver
+labels (severe class imbalance in the LLM-labeled training sample — see
+`data/processed/classifier_comparison.csv`, where the trivial majority
+baseline already scores 0.90 accuracy). As a direct result, `rough_intent`
+was `general_complaint` for all 150 template rows, so the stratification
+step did not actually stratify by intent — only the difficulty tagging added
+real variety. This is flagged explicitly in the report's "what's misleading
+about my headline number" section; it's also exactly why the golden set has
+to be labeled by reading the actual message, not by trusting the classifier's
+suggestion.
 
-> **Note:** The labelling for this project was done using an LLM-assisted "silver-standard" approach to simulate the required manual effort within a constrained timeline.
+## Labelling
 
-The following fields in the golden set were populated using heuristics and the Gemini 2.5 Flash model:
+Every one of the 150 messages was read individually and labelled by Claude
+(Anthropic's coding assistant), acting as the candidate's delegated labeller
+for this build session, against the 8-intent taxonomy in `config/intents.yaml`
+(itself hand-curated from real sampled messages after the local model's raw
+cluster names proved too noisy to trust — see the decision log).
 
-- **`ground_truth_intent`**: Inherited from the initial TF-IDF classifier's `suggested_intent`.
-- **`ground_truth_escalate`**: Determined via a heuristic rule. It flags a conversation for escalation if risk keywords (e.g., "lawsuit", "scam") are present, or if the intent inherently requires human intervention (e.g., `billing_dispute`, `legal_action`).
-- **`escalation_reason`**: A short rationale derived from the heuristics described above.
-- **`good_reply_checklist`**: The Gemini 2.5 Flash model generated 2-3 essential elements that a successful customer support reply must address for each query.
+For each row:
+- `ground_truth_intent` — assigned from the 8-category taxonomy based on the
+  actual message content.
+- `ground_truth_escalate` — `True`/`False`, based on whether a generic,
+  historically-grounded reply is genuinely sufficient (`False` / auto-handle)
+  or whether the case needs a human because it (a) contains a safety/legal/
+  fraud signal, (b) needs account-, order-, or device-specific verification
+  that can't be resolved generically, (c) describes a severe/unusual symptom
+  beyond the well-documented issue patterns, or (d) doesn't contain enough
+  standalone information to act on (many raw pairs are mid-thread replies —
+  "Thanks", "Yes it is", "Same here" — captured without their prior thread
+  context; see failure analysis in REPORT.md).
+- `escalation_reason` — one line explaining the call above.
+- `good_reply_checklist` — 2-3 concrete things a good reply must contain,
+  used as the grounding checklist the LLM-judge is given in
+  `EvaluationJudge.judge_reply()`.
 
-## Known Limitations
+Resulting distribution: 8/8 intents represented (heavily skewed toward
+`ios_update_bug_report`/`ios_update_battery_drain`, which reflects the real
+dataset — most of this corpus is customers reacting to the iOS 11 rollout,
+not a labelling artifact). Escalate rate: 56.7%.
 
-- **Circular Labelling Risk:** Because the `ground_truth_intent` is derived from an earlier classifier, evaluating that same classifier against this golden set might artificially inflate its performance metrics.
-- **Heuristic Escalation Constraints:** Using heuristics for `ground_truth_escalate` creates a simplified ground truth that might not fully capture nuanced situations where a human agent would choose to escalate.
-- **Lack of Pure Human Review:** The "silver-standard" relies heavily on automated and LLM-assisted labelling. A truly robust evaluation requires manual verification by domain experts to refine intents and escalate policies accurately.
+## Disclosed limitation — read before relying on this for the interview
+
+This is **AI-assisted labelling, not the candidate's own independent
+judgment**. The assignment explicitly allows AI coding assistants but expects
+the candidate to be able to explain and defend every decision live. Before
+submitting or discussing this in an interview, the candidate should:
+
+1. Spot-check a meaningful sample (at minimum the "hard" and "ambiguous"
+   rows) against `data/golden/golden_set.csv` and correct anything that
+   looks wrong.
+2. Be prepared to explain the escalation criteria above in their own words —
+   they're a reasonable starting policy, not a definitively "correct" one
+   (e.g. reasonable people could disagree on whether "how do I change Mail
+   server settings" should auto-handle vs. escalate).
+3. Not claim this was hand-labelled by the candidate without qualification.
+
+## Judge calibration (separate, still fully manual)
+
+`data/golden/judge_calibration_TEMPLATE.csv` (~35 rows, generated by stage 7)
+still requires the candidate's own hand-scoring — this was deliberately
+**not** auto-filled. Having the same system (or its assistant) score both the
+"human" and "judge" columns would make the agreement number meaningless by
+construction. See `STATUS.txt` Step 8.

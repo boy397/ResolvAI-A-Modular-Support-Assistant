@@ -1,0 +1,219 @@
+HIVER ASSIGNMENT - STATUS AS OF NOW
+=====================================
+
+DONE (code exists, tested by me on synthetic data where possible)
+-------------------------------------------------------------------
+- Repo structure: src/resolvai package, config-driven (config/config.yaml + params.yaml)
+- Data ingestion: brand profiling + subsampling -- logic tested, works correctly
+- Thread reconstruction + text cleaning + boilerplate tagging -- tested, works correctly
+  (I found and fixed a real bug here: a CSV dtype round-trip issue that silently
+  dropped every customer/reply pair. Fixed and re-verified.)
+- Intent discovery (clustering + LLM auto-naming) -- code written, NOT tested with
+  a real LLM call (no network/API access in my sandbox)
+- Classification baselines (majority / TF-IDF+LogReg / LLM few-shot) -- code written,
+  NOT run on real data yet
+- Retrieval index + grounded reply generation -- code written, NOT run yet
+- Escalation policy (rule-based) -- tested, all 4 decision branches verified correct
+- Evaluation harness code (intent metrics, escalation metrics + false auto-handle
+  rate, LLM-judge scoring, human/judge agreement, leakage check) -- code written
+- stage_07_evaluate.py -- the runner script that actually calls the evaluation
+  harness end-to-end and writes evaluation_results.json -- just added, NOT run yet
+- Flask serving app (app.py) + minimal test page -- written, not run
+- Dockerfile + docker-compose.yaml -- written, matches Render's $PORT convention
+- Smoke tests (tests/test_smoke.py) -- these are the tests I actually ran
+
+UPDATE: RATE LIMIT FIX APPLIED
+--------------------------------
+"Too many requests" errors were caused by stage 4 (classification baselines)
+firing 800+ sequential LLM calls with no delay or retry logic -- free-tier
+APIs can't sustain that. Fixed:
+  - src/resolvai/utils/llm_client.py now retries on rate-limit errors with
+    exponential backoff, and throttles calls to ~1.2s apart by default
+    (tested with a simulated flaky call -- confirmed working)
+  - params.yaml -> classification.label_sample_size reduced from 800 to 250
+    (raise it later once a full run completes cleanly)
+  - Reply generation now falls back to the single best-matching historical
+    reply (no LLM call) if the API is ever unavailable even after retries,
+    instead of crashing
+If you still see rate-limit errors after this, raise
+MIN_SECONDS_BETWEEN_CALLS in llm_client.py (e.g. to 2.5) and/or lower
+label_sample_size further (e.g. to 150).
+
+
+NOT DONE YET (this is the real remaining work, and none of it can be done by me
+without your dataset, your API key actually running, and your manual labeling time)
+-------------------------------------------------------------------------------------
+1. Nobody has run main.py on the real dataset yet. No real numbers exist anywhere.
+2. Golden evaluation set: ONLY a template generator exists. Zero hand-labeled
+   examples exist right now. This is manual work -- budget real hours for it.
+3. SAMPLING_AND_LABELLING_METHODOLOGY.md does not exist yet -- write it once you've
+   done the labeling (a few paragraphs: how you sampled, who labeled it, known limits).
+4. judge_calibration_scored.csv (your own hand-scores on ~35 examples, used to
+   compute agreement with the LLM judge) does not exist yet.
+5. REPORT.md is a skeleton with placeholder text only -- nothing is actually
+   written. Cannot be written until you have real numbers and real failure examples.
+6. DECISION_LOG.md has 5 generic starter entries -- needs 5-10 more reflecting
+   decisions YOU actually made while running this (brand choice + real numbers,
+   threshold values you picked and why, any taxonomy fixes you made by hand, etc.)
+7. .env.example referenced in README does not exist as an actual file (minor fix)
+8. requirements.txt has no pinned versions (risk for the "reproduce in 15 min" claim)
+
+
+STEP-BY-STEP: GETTING IT RUNNING WITHOUT ERRORS
+==================================================
+
+You said the API key is already in your local .env -- good, that's the main
+external dependency handled. Do the following on YOUR machine, in this order:
+
+STEP 1 - Environment setup
+---------------------------
+    python -m venv venv
+    venv\Scripts\activate          (Windows)   or   source venv/bin/activate (Mac/Linux)
+    pip install -r requirements.txt
+
+    Watch for: sentence-transformers pulls in torch, which is a large download
+    and can take several minutes on first install. This is normal, not an error.
+
+STEP 2 - Get the dataset in place
+-----------------------------------
+    Download the Kaggle "customer-support-on-twitter" CSV.
+    Place it at: data/raw/sample.csv
+    (If your file has a different name, either rename it or edit
+    config/config.yaml -> data_ingestion.raw_data_path)
+
+STEP 3 - First dry run: just the brand profiling
+---------------------------------------------------
+    python -m resolvai.pipeline.stage_01_data_ingestion
+
+    Read the printed brand profile table in your terminal / logs/running_logs.log.
+    Confirm config/config.yaml -> data_ingestion.chosen_brand is actually the
+    brand you want (edit the yaml file directly if you want to change it, then
+    re-run this stage).
+
+STEP 4 - Run the full training pipeline
+-------------------------------------------
+    python main.py
+
+    This runs stages 1-5 in order: ingestion -> thread reconstruction -> intent
+    discovery -> classification baselines -> retrieval index build.
+
+    Watch for these likely issues:
+    - If it fails on the Groq/Gemini call: double check the key name in .env
+      matches exactly GROQ_API_KEY or GEMINI_API_KEY, and that
+      params.yaml -> llm.provider is set to the matching provider ("groq" or
+      "gemini") -- these two must agree or it will error immediately.
+    - If sentence-transformers fails to download the model: it needs internet
+      access on first run to pull all-MiniLM-L6-v2 from Hugging Face (one-time,
+      cached after that).
+    - If it crashes partway through classification_baselines with a rate-limit
+      error: Groq/Gemini free tiers have per-minute request limits. If you hit
+      this, add a short time.sleep(0.5) inside the loop that calls
+      classify_intent_llm in src/resolvai/components/classification_baselines.py,
+      or reduce params.yaml -> classification.label_sample_size (e.g. to 300).
+
+STEP 5 - Manually review the LLM-generated intent taxonomy
+---------------------------------------------------------------
+    Open config/intents.yaml after stage 3 runs. Read every intent name and
+    definition. Fix anything that looks wrong, merge duplicates, rename badly
+    named ones. Do NOT skip this -- it feeds everything downstream.
+    If you change it, re-run from STEP 4 (stage 4 onward) so the classifier
+    baselines reflect your corrected taxonomy.
+
+STEP 6 - Generate and hand-label the golden set
+-----------------------------------------------------
+    python -m resolvai.pipeline.stage_06_golden_set_template
+
+    This writes data/golden/golden_set_TEMPLATE.csv (150 rows, stratified by
+    a rough intent guess + difficulty tag). Open this CSV yourself and fill in:
+    - ground_truth_intent (correct the suggested_intent if it's wrong)
+    - ground_truth_escalate (True/False)
+    - escalation_reason (one short line)
+    - good_reply_checklist (2-3 things a good reply must contain)
+
+    Save the completed file as data/golden/golden_set.csv (exact filename,
+    same folder). This is manual work only you can do -- there is no shortcut.
+
+    Also write data/golden/SAMPLING_AND_LABELLING_METHODOLOGY.md: a few
+    paragraphs on how you sampled (stratified by rough intent + difficulty),
+    who labeled it (you), and known limitations (rough_intent came from a weak
+    classifier so the suggestions could be wrong -- that's expected).
+
+STEP 7 - Run the evaluation harness
+----------------------------------------
+    python -m resolvai.pipeline.stage_07_evaluate
+
+    This computes intent accuracy/F1, escalation accuracy + false auto-handle
+    rate, generates replies for every golden example and LLM-judges them, checks
+    for golden/retrieval-set data leakage, and writes everything to
+    data/golden/evaluation_results.json. It also writes data/golden/judge_scores.csv
+    with the per-example judge outputs and generated replies -- this is your
+    source material for the failure analysis section of the report.
+
+    If data/golden/judge_calibration_scored.csv does not exist yet, this stage
+    will skip the human/judge agreement calculation and print a warning telling
+    you what to do next (see Step 8).
+
+STEP 8 - Hand-score the judge calibration sample
+------------------------------------------------------
+    After Step 7, open data/golden/judge_calibration_TEMPLATE.csv (~35 rows).
+    Score each one yourself on the same 4 axes (grounding, actionability, tone,
+    safety, 1-5 scale) by adding columns human_grounding, human_actionability,
+    human_tone, human_safety. You'll need the judge's own scores to compare
+    against -- pull the matching rows from data/golden/judge_scores.csv (from
+    Step 7) and add columns judge_grounding, judge_actionability, judge_tone,
+    judge_safety to the same file.
+    Save as data/golden/judge_calibration_scored.csv, then re-run Step 7 --
+    it will now also print the kappa/agreement numbers.
+
+STEP 9 - Run the smoke tests
+----------------------------------
+    pytest tests/ -v
+    All should pass if Steps 1-4 completed. This is a sanity check, not a
+    substitute for the manual verification above.
+
+STEP 10 - Write the report and finish the decision log
+-------------------------------------------------------------
+    Now that data/golden/evaluation_results.json and judge_scores.csv have real
+    numbers and real examples, fill in REPORT.md properly:
+    - Problem framing: 1-2 paragraphs on what "good" means for this brand
+    - Results vs. baselines: pull the table from
+      data/processed/classifier_comparison.csv and evaluation_results.json
+    - Failure analysis: sort judge_scores.csv by lowest scores per axis, pick
+      5 real examples across intent errors / retrieval misses / generation
+      errors, write a one-line hypothesis for each
+    - Misleading number section: use the golden_retrieval_overlap_count value
+      from evaluation_results.json, plus the other points already drafted in
+      REPORT.md
+    - Next steps with one more week
+
+    Add 5-10 more entries to DECISION_LOG.md reflecting your actual choices
+    (which brand and why, what threshold values you ended up with, any
+    taxonomy corrections you made, etc.)
+
+STEP 11 - Test the serving app locally
+--------------------------------------------
+    python app.py
+    Open http://localhost:8080, type a test message, confirm you get an
+    intent, a decision, and a reply back with no errors.
+
+STEP 12 - Docker sanity check
+-----------------------------------
+    docker compose up --build
+    Confirm it starts cleanly and http://localhost:8080 still works. This is
+    what proves your "reproduce in under 15 minutes" claim is real.
+
+STEP 13 - Deploy to Render (only after Steps 1-12 all work locally)
+--------------------------------------------------------------------------
+    Push to GitHub. IMPORTANT: config/intents.yaml, models/*.pkl, and
+    artifacts/retrieval_index.pkl must be committed to the repo (Render does
+    not run main.py automatically) -- double check your .gitignore is not
+    excluding these before pushing.
+    New Web Service on Render -> pick the repo -> environment: Docker ->
+    set GROQ_API_KEY / GEMINI_API_KEY in Render's dashboard env vars.
+
+STEP 14 - Submit
+----------------------
+    Public repo link (or private + access granted) + the report, through the
+    Notion form. Do not email it. Double check the decision log discloses that
+    this was built with LLM coding assistance (the assignment explicitly
+    allows this but wants it disclosed).

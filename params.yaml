@@ -5,7 +5,10 @@ intent_discovery:
   n_clusters: 10
 
 classification:
-  label_sample_size: 10
+  # kept modest on purpose -- with retry/backoff + throttling in llm_client.py this
+  # still takes a few minutes on a free-tier API. Raise it once you've confirmed
+  # a full run completes without hitting persistent rate limits.
+  label_sample_size: 250
 
 retrieval:
   top_k_retrieval: 3
@@ -29,5 +32,9 @@ golden_set:
   judge_calibration_size: 35
 
 llm:
-  provider: groq
-  model: qwen/qwen3.8-27b
+  # "local" runs a small instruct model on-device (transformers, CPU) -- no API key,
+  # no rate limit, no cost. This is the default so free-tier 429s from Groq/Gemini
+  # never happen. Switch to "groq"/"gemini" (+ matching *_API_KEY in .env) if you'd
+  # rather use a hosted model and are fine with their free-tier limits.
+  provider: local
+  model: Qwen/Qwen2.5-0.5B-Instruct   # ~1GB, CPU-friendly; downloaded once and cached by HF

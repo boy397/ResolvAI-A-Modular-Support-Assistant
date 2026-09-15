@@ -76,12 +76,12 @@ class EvaluationJudge:
 
     def judge_reply(self, customer_text: str, checklist: str, reply: str) -> dict:
         prompt = JUDGE_RUBRIC.format(customer_text=customer_text, checklist=checklist, reply=reply)
+        raw = self.llm_call(prompt, max_tokens=100)
         try:
-            raw = self.llm_call(prompt, max_tokens=100)
             return json.loads(raw)
         except Exception:
-            logger.warning(f"judge API call failed or output not parseable")
-            return {"grounding": 3.0, "actionability": 3.0, "tone": 3.0, "safety": 3.0}
+            logger.warning(f"judge output not parseable JSON: {raw[:100]}")
+            return {"grounding": None, "actionability": None, "tone": None, "safety": None}
 
     @staticmethod
     def human_judge_agreement(scored_df: pd.DataFrame, axes=("grounding", "actionability", "tone", "safety")) -> dict:

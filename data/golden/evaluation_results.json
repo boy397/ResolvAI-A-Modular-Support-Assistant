@@ -1,0 +1,17 @@
+{
+  "intent": {
+    "accuracy": 0.22666666666666666,
+    "macro_f1": 0.04619565217391304
+  },
+  "escalation": {
+    "accuracy": 0.4533333333333333,
+    "false_auto_handle_rate": 0.5133333333333333
+  },
+  "reply_quality_mean_scores": {
+    "grounding": 3.7248322147651005,
+    "actionability": 3.7181208053691277,
+    "tone": 3.7248322147651005,
+    "safety": 3.7114093959731544
+  },
+  "golden_retrieval_overlap_count": 150
+}

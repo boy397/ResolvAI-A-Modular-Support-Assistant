@@ -1,10 +1,17 @@
 artifacts_root: artifacts
 
 data_ingestion:
-  raw_data_path: data/raw/subset_twcs.csv
+  # Kaggle "Customer Support on Twitter" ships two files: twcs.csv (full ~3M-row
+  # raw dataset) and sample.csv (Kaggle's own small demo subset). We use the full
+  # file since it's what's actually available here and profile_brands/create_subsample
+  # already reduce it to a single brand's threads -- if twcs.csv isn't present (e.g.
+  # you only downloaded the small demo, or don't have ~600MB/1GB RAM to spare),
+  # point this at data/raw/sample.csv instead; the pipeline works unchanged, just
+  # on far fewer brand threads.
+  raw_data_path: data/raw/twcs.csv
   subsample_path: data/processed/raw_subsample.csv
   candidate_brands: ["AmazonHelp", "AppleSupport", "SpotifyCares", "Uber_Support"]
-  chosen_brand: "AmazonHelp"   # set after reviewing the profiling table stage 01 prints
+  chosen_brand: "AppleSupport"   # set after reviewing the profiling table stage 01 prints
 
 thread_reconstruction:
   subsample_path: data/processed/raw_subsample.csv

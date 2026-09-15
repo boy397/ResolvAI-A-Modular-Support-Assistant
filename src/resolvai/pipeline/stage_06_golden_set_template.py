@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from resolvai import logger
 from resolvai.config.configuration import ConfigurationManager
 from resolvai.components.evaluation_and_judge import EvaluationJudge

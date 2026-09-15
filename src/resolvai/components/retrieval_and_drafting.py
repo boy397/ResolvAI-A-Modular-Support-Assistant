@@ -74,7 +74,23 @@ the brand's tone. Do not invent policies, refunds, or tracking numbers not impli
 New customer message: "{customer_text}"
 
 Reply:"""
-        return self.llm_call(prompt, max_tokens=200)
+        try:
+            return self.llm_call(prompt, max_tokens=200)
+        except Exception as e:
+            logger.warning(f"LLM generation failed after retries ({e}); falling back to top retrieved reply")
+            return self._fallback_reply(retrieved)
+
+    @staticmethod
+    def _fallback_reply(retrieved: list) -> str:
+        """Used only when the LLM is unavailable even after retry/backoff (e.g. a
+        sustained outage or an exhausted daily quota, not a transient rate limit --
+        those are already handled by llm_client's retry logic). This is the closest
+        thing to the assignment's 'simple baseline' for drafting: the single most
+        similar historical brand reply, verbatim, with no LLM involved. It keeps the
+        agent responding instead of erroring out, at the cost of a less-tailored reply."""
+        if not retrieved:
+            return "Thanks for reaching out -- a member of our team will follow up with you shortly."
+        return retrieved[0]["brand_reply"]
 
     def run_and_log(self, customer_text: str, intent: str, intent_confidence: float, decision: dict) -> dict:
         retrieved = self.retrieve(customer_text)

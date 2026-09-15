@@ -1,5 +1,5 @@
 import json
-import time
+import os
 import yaml
 import numpy as np
 import pandas as pd
@@ -31,6 +31,19 @@ class IntentDiscovery:
         self.config = config
 
     def discover_intents(self) -> dict:
+        # Once a taxonomy exists it has (or should have) been hand-reviewed per the
+        # README -- re-running `main.py` must not silently clobber that curation with
+        # a fresh, differently-worded LLM pass. Delete config/intents.yaml yourself
+        # if you actually want to regenerate it from scratch.
+        if os.path.exists(self.config.intents_config_path):
+            with open(self.config.intents_config_path) as f:
+                existing = yaml.safe_load(f)
+            logger.info(
+                f"{self.config.intents_config_path} already exists ({len(existing)} intents) -- "
+                f"leaving it alone. Delete the file first if you want to regenerate it."
+            )
+            return existing
+
         from sentence_transformers import SentenceTransformer
 
         pairs_df = pd.read_csv(self.config.cleaned_pairs_path)
@@ -51,7 +64,6 @@ class IntentDiscovery:
                 min(6, (sample["cluster"] == c).sum()), random_state=self.config.random_state
             ).tolist()
             intents.update(self._name_cluster(llm_call, examples))
-            time.sleep(2.5)  # rate-limit guard
 
         if not intents:
             logger.warning("LLM cluster naming failed; falling back to default intent taxonomy")

@@ -67,7 +67,6 @@ class ThreadReconstruction:
             (pairs_df["customer_text_clean"].str.len() > 5) & (pairs_df["brand_text_clean"].str.len() > 5)
         ]
         pairs_df = pairs_df.drop_duplicates(subset=["customer_text_clean", "brand_text_clean"]).reset_index(drop=True)
-        pairs_df = pairs_df.head(5000)
 
         pairs_df.to_csv(self.config.cleaned_pairs_path, index=False)
         logger.info(f"cleaned pairs: {len(pairs_df)} -> {self.config.cleaned_pairs_path} "

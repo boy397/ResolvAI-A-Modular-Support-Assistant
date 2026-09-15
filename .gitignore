@@ -5,11 +5,11 @@ venv/
 .env
 logs/
 data/raw/*.csv
-!data/raw/subset_twcs.csv
+!data/raw/sample.csv
 data/processed/
 models/*.pkl
+!models/tfidf_vectorizer.pkl
+!models/logreg_clf.pkl
 artifacts/*.pkl
-twcs.csv
-sample.csv
 *.egg-info/
 .ipynb_checkpoints/
