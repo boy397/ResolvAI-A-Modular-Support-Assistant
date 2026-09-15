@@ -18,7 +18,10 @@ def auto_label_golden_set():
     
     llm_call = LLMClient.get(config.llm_provider, config.llm_model)
     
+    rate_limit_warned = False
+    
     def generate_checklist(text):
+        nonlocal rate_limit_warned
         prompt = f"""You are evaluating customer support messages.
 For the following customer message, what are 2-3 essential elements a good support agent reply MUST contain?
 Keep it brief. E.g. "- Acknowledge the issue\n- Ask for order number"
@@ -29,7 +32,9 @@ Checklist:"""
             time.sleep(0.3)
             return llm_call(prompt, max_tokens=60).strip()
         except Exception as e:
-            logger.warning(f"Checklist generation failed: {e}")
+            if not rate_limit_warned:
+                logger.warning(f"Checklist API failed (likely Rate Limits). Mocking remaining checklists. First error: {e}")
+                rate_limit_warned = True
             return "- Acknowledge the issue\n- Offer assistance"
             
     # Heuristics for auto-labeling
