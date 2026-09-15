@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResolvAI — Support Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.1);
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.5s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(to right, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      font-size: 15px;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      color: var(--text-main);
+      resize: none;
+      transition: all 0.3s ease;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    textarea::placeholder { color: var(--text-muted); }
+
+    button {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:active { transform: translateY(1px); }
+
+    #result {
+      margin-top: 32px;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .result-card {
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .meta-data {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-label { color: var(--text-muted); font-weight: 500; margin-right: 6px; }
+
+    .escalate { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .auto_handle { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .intent-badge { background: rgba(255, 255, 255, 0.05); color: var(--text-main); border: 1px solid var(--border); }
+
+    .reply-content {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-main);
+      white-space: pre-wrap;
+    }
+
+    .loading {
+      display: none;
+      justify-content: center;
+      margin-top: 32px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .reason-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>ResolvAI Support</h2>
+    <p class="subtitle">AI-powered customer service agent for AmazonHelp</p>
+    
+    <div class="input-group">
+      <textarea id="message" placeholder="Type a customer message here... e.g., 'Where is my package? It was supposed to arrive yesterday.'"></textarea>
+    </div>
+    
+    <button onclick="send()" id="sendBtn">
+      <span>Analyze & Resolve</span>
+    </button>
+    
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    async function send() {
+      const messageInput = document.getElementById('message');
+      const message = messageInput.value.trim();
+      const btn = document.getElementById('sendBtn');
+      const loading = document.getElementById('loading');
+      const resultDiv = document.getElementById('result');
+
+      if (!message) return;
+
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      resultDiv.style.display = 'none';
+      loading.style.display = 'flex';
+
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        
+        loading.style.display = 'none';
+        resultDiv.style.display = 'block';
+
+        if (data.error) {
+          resultDiv.innerHTML = `
+            <div class="result-card" style="border-color: rgba(239, 68, 68, 0.3);">
+              <div class="reply-content" style="color: #fca5a5;">${data.error}</div>
+            </div>`;
+        } else {
+          const actionClass = data.decision.action === 'escalate' ? 'escalate' : 'auto_handle';
+          const confidence = (data.intent_confidence * 100).toFixed(1);
+          
+          resultDiv.innerHTML = `
+            <div class="result-card">
+              <div class="meta-data">
+                <div class="badge ${actionClass}">
+                  <span class="badge-label">Action:</span> ${data.decision.action.toUpperCase()}
+                </div>
+                <div class="badge intent-badge">
+                  <span class="badge-label">Intent:</span> ${data.intent} (${confidence}%)
+                </div>
+              </div>
+              <div class="reply-content">${data.reply}</div>
+              <span class="reason-text">Reasoning: ${data.decision.reason}</span>
+            </div>
+          `;
+        }
+      } catch (err) {
+        loading.style.display = 'none';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<div class="result-card"><div class="reply-content" style="color: #fca5a5;">Connection error. Please try again.</div></div>`;
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }
+    }
+  </script>
+</body>
+</html>
