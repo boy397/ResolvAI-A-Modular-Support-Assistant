@@ -13,6 +13,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Explicitly declare build args so Render passes the dashboard Environment Variables into the build
+ARG GROQ_API_KEY
+ENV GROQ_API_KEY=$GROQ_API_KEY
+
+ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+
 # Run the training pipeline on the subset data during image build
 RUN python main.py
 
