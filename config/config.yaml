@@ -1,7 +1,7 @@
 artifacts_root: artifacts
 
 data_ingestion:
-  raw_data_path: data/raw/twcs.csv
+  raw_data_path: data/raw/subset_twcs.csv
   subsample_path: data/processed/raw_subsample.csv
   candidate_brands: ["AmazonHelp", "AppleSupport", "SpotifyCares", "Uber_Support"]
   chosen_brand: "AmazonHelp"   # set after reviewing the profiling table stage 01 prints

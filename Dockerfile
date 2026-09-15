@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Run the training pipeline on the subset data during image build
+RUN python main.py
+
 ENV PORT=8080
 EXPOSE 8080
 

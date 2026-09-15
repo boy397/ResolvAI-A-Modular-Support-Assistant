@@ -74,10 +74,7 @@ the brand's tone. Do not invent policies, refunds, or tracking numbers not impli
 New customer message: "{customer_text}"
 
 Reply:"""
-        try:
-            return self.llm_call(prompt, max_tokens=200)
-        except Exception:
-            return "Mock reply: We apologize for the inconvenience. Here is your resolution based on our policy."
+        return self.llm_call(prompt, max_tokens=200)
 
     def run_and_log(self, customer_text: str, intent: str, intent_confidence: float, decision: dict) -> dict:
         retrieved = self.retrieve(customer_text)

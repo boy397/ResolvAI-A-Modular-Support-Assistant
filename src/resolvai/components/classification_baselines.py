@@ -21,9 +21,23 @@ class ClassificationBaselines:
         self.llm_call = LLMClient.get(config.llm_provider, config.llm_model)
 
     def classify_intent_llm(self, text: str) -> str:
-        # MOCK LLM: Since the free tier API is completely exhausted, we randomly 
-        # assign an intent to simulate the LLM baseline and allow the pipeline to finish.
-        return random.choice(list(self.intents.keys()))
+        prompt = f"""Classify the customer's intent into exactly one of the following categories:
+{chr(10).join(f"- {k}: {v}" for k, v in self.intents.items())}
+- unmatched: If it clearly does not fit any of the above.
+
+Customer message: "{text}"
+Respond with ONLY the category name and nothing else."""
+        try:
+            time.sleep(0.3)
+            raw = self.llm_call(prompt, max_tokens=10).strip().lower()
+            # fuzzy match if LLM added punctuation
+            for k in self.intents:
+                if k in raw:
+                    return k
+            return "unmatched"
+        except Exception as e:
+            logger.warning(f"classification failed: {e}")
+            return "unmatched"
 
     def run_benchmarks(self) -> pd.DataFrame:
         pairs_df = pd.read_csv(self.config.cleaned_pairs_path)

@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv()  # load .env file so API keys are available without manual sourcing
 
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
 from resolvai import logger
 
 
@@ -19,6 +21,7 @@ def make_llm_call(provider: str, model: str) -> Callable[[str, int], str]:
 
         client = Groq(api_key=os.environ["GROQ_API_KEY"], max_retries=0)
 
+        @retry(wait=wait_exponential(multiplier=1, min=2, max=60), stop=stop_after_attempt(10))
         def call(prompt: str, max_tokens: int = 200) -> str:
             resp = client.chat.completions.create(
                 model=model,
@@ -35,6 +38,7 @@ def make_llm_call(provider: str, model: str) -> Callable[[str, int], str]:
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
         gemini_model = genai.GenerativeModel(model)
 
+        @retry(wait=wait_exponential(multiplier=1, min=2, max=60), stop=stop_after_attempt(10))
         def call(prompt: str, max_tokens: int = 200) -> str:
             resp = gemini_model.generate_content(prompt)
             return resp.text.strip()

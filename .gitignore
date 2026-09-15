@@ -5,7 +5,10 @@ venv/
 .env
 logs/
 data/raw/*.csv
+!data/raw/subset_twcs.csv
 data/processed/
+models/*.pkl
+artifacts/*.pkl
 twcs.csv
 sample.csv
 *.egg-info/

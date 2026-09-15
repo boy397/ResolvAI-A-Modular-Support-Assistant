@@ -13,7 +13,7 @@ from resolvai.pipeline.stage_05_retrieval_index import RetrievalIndexPipeline
 STAGES = [
     ("Data Ingestion", DataIngestionPipeline),
     ("Thread Reconstruction", ThreadReconstructionPipeline),
-    # ("Intent Discovery", IntentDiscoveryPipeline),  # skipped to bypass API limit
+    ("Intent Discovery", IntentDiscoveryPipeline),
     ("Classification Baselines", ClassificationBaselinesPipeline),
     ("Build Retrieval Index", RetrievalIndexPipeline),
 ]
